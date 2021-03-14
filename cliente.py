@@ -1,5 +1,6 @@
 import asyncio
 import urllib.parse
+import textwrap
 
 from decoder import Decoder as decoder
 
@@ -17,6 +18,9 @@ class Cliente():
 		self.hostname = url.hostname
 		self.ssl = ssl
 
+		self.reader = None
+		self.writer = None
+
 	async def connect(self):
 		""" Connects to the host specified in the URL """
 		if self.scheme == 'https':
@@ -32,10 +36,10 @@ class Cliente():
 	def format(self, payload):
 		""" Formats the request removing common copy-paste induced incompatibilities """
 		# Steps:
-		# - strip tabs
+		# - strips any common leading whitespace from every line in text
 		# - adds \r\n\r\n at the end of the request (this shouldn't cause problems)
 
-		return payload.replace("\t", "") + "\r\n\r\n"
+		return textwrap.dedent(payload) + "\r\n\r\n"
 
 	def send(self, data):
 		""" Sends the request """
@@ -43,7 +47,7 @@ class Cliente():
 		self.writer.write(data.encode('utf-8'))
 
 	def _bytes_to_string(self, data, headers):
-		#list of data to try to decode
+		# list of data to try to decode
 		to_decode = ["application", "text", "message"]	
 
 		tmp_type = headers.get("content-type")
@@ -56,7 +60,7 @@ class Cliente():
 						try:
 							return data.decode(tmp)
 						except UnicodeDecodeError:
-							#fallback encoding
+							# fallback encoding
 							return data.decode("latin-1")
 			else:
 				to_decode = ["application", "text", "message"]	

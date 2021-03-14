@@ -12,7 +12,7 @@ assert len(DELIMITERS) == 2, "DELIMITERS must be a pair of strings"
 
 
 class Batch:
-    def simple_list_generator(request, list_t):
+    def simple_list_generator(self, request, list_t):
         """
             Given a list of tuple (of size #params), and a model of request,
             returns a list of requests filled with the params.
@@ -20,11 +20,11 @@ class Batch:
         """
 
         # Check if tuples have the same length
-        if not Batch._check_tuple_len(list_t):
+        if not self._check_tuple_len(list_t):
             raise Exception("Inconsistent tuple lengths")
 
         # Gets indexes of DELIMITERS
-        positions = Batch._indexes(request, DELIMITERS)
+        positions = self._indexes(request, DELIMITERS)
 
         if len(positions) != len(list_t):
             raise Exception("Number of DELIMITERS and number of parameters defined don't match")
@@ -65,9 +65,9 @@ class Batch:
 
         return ret
 
-    def _indexes(string, tuple_c):
+    def _indexes(self, string, tuple_c):
         # escape special characters from delimiters
-        delim_start, delim_end = Batch._escape_delimiters(tuple_c)
+        delim_start, delim_end = self._escape_delimiters(tuple_c)
 
         # match anything between the delimiters (use greedy regex to handle multiple delimiters in one line)
         pattern = delim_start + ".*?" + delim_end
@@ -77,7 +77,7 @@ class Batch:
 
         return result
 
-    def _escape_delimiters(tuple_c):
+    def _escape_delimiters(self, tuple_c):
         # "\\" needs to be first or it might cause problems
         special = ["\\", ".", "^", "$", "*", "+", "?", "{", "[", "]", "|", "(", ")"]
         delim_start = tuple_c[0]
@@ -90,19 +90,18 @@ class Batch:
 
         return delim_start, delim_end
 
-    def _check_tuple_len(list_t):
+    def _check_tuple_len(self, list_t):
 
         # check that length of every tuple is the same
         leng = 0
         for t in list_t:
-            # is it's the first length observed...
+            # is it's the first length observed
             if not leng:
                 leng = len(t)
             else:
                 if not leng == len(t):
                     return False
         return True
-
 
 class Intrudo:
     class Response:
@@ -148,22 +147,23 @@ class Intrudo:
 
 def main():
     data = """
-			GET /get?x={{param1}}&y={{param2}} HTTP/1.1
-			Host: httpbin.org
-			User-Agent: {{Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0}}
-			Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
-			Accept-Language: en-US,en;q=0.5
-			Accept-Encoding: gzip, {{deflate}}, br
-			Connection: keep-alive
-			Upgrade-Insecure-Requests: 1
-			DNT: 1
-			Sec-GPC: 1
-			Cache-Control: max-age=0"""
+    GET /get?x={{param1}}&y={{param2}} HTTP/1.1
+    Host: httpbin.org
+    User-Agent: {{Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0}}
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, {{deflate}}, br
+    Connection: keep-alive
+    Upgrade-Insecure-Requests: 1
+    DNT: 1
+    Sec-GPC: 1
+    Cache-Control: max-age=0"""
 
     url = "https://httpbin.org/"
 
-    #batch = Batch.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
-    batch = Batch.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    # batch = Batch.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    b = Batch()
+    batch = b.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
 
     intr = Intrudo(url)
     intr.fire(batch)
