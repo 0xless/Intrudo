@@ -6,6 +6,7 @@ from decoder import Decoder as decoder
 #
 # TODO: test _bytes_to_string
 # TODO: check if _bytes_to_string to_decode list is correct
+# TODO: restructure self.http_version, self.status_code, self.status (not to be class variables)
 #
 
 class Cliente(): 
@@ -71,6 +72,9 @@ class Cliente():
 		headers = {}
 		is_first_line = True
 
+		# valid response flag
+		valid = True
+
 		# Handle headers retrieval
 		while True:
 			line = await self.reader.readline()
@@ -82,23 +86,36 @@ class Cliente():
 					# HTTP/{version} {status_code} {status}
 					
 					# Only 2 splits because some statuses will contain spaces (like "Bad Request")
-					(self.http_version, self.status_code, self.status) = line.decode('latin1').split(" ", 2)
+					first_line = line.decode('latin1').split(" ", 2)
+					if len(first_line) == 3:
+						(self.http_version, self.status_code, self.status) = first_line
+					# if first line is invalid break
+					else:
+						(self.http_version, self.status_code, self.status) = None, None, None
+						valid = False
+						break
+
 					is_first_line = False
 				else:
 					# Extracts headers from the response
 					# header: value
 
 					# Only 1 split because some headers (like date) will contain the ":" char
-					(key, val) = line.decode('latin1').split(":", 1) 
-					key = key.strip(" \r\n").lower()
-					val = val.strip(" \r\n")
-					headers[key] = val
+					line = line.decode('latin1').split(":", 1)
+					if len(line) == 2:
+						(key, val) = line
+						key = key.strip(" \r\n").lower()
+						val = val.strip(" \r\n")
+						headers[key] = val
 
 		# Handle body retrieval
-		length = headers.get("content-length")
+		if valid:
+			length = headers.get("content-length")
+		else:
+			length = 0
 
 		# Content length specified
-		if(length != None):
+		if length is not None:
 			body = await self.reader.readexactly(int(length))
 
 			d = decoder(headers)
