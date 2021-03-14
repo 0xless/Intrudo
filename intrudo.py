@@ -12,21 +12,21 @@ assert len(DELIMITERS) == 2, "DELIMITERS must be a pair of strings"
 
 
 class Batch:
-    def simple_list_generator(self, request, list_t):
+    def pitchfork(self, request, multiple_payload_list):
         """
             Given a list of tuple (of size #params), and a model of request,
-            returns a list of requests filled with the params.
+            returns a list of requests with parameters injected.
             Each pair of DELIMITERS in the request model will be filled with the i-th value for that field.
         """
 
         # Check if tuples have the same length
-        if not self._check_tuple_len(list_t):
-            raise Exception("Inconsistent tuple lengths")
+        if not self._check_tuple_len(multiple_payload_list):
+            raise Exception("Inconsistent payloads lengths")
 
         # Gets indexes of DELIMITERS
         positions = self._indexes(request, DELIMITERS)
 
-        if len(positions) != len(list_t):
+        if len(positions) != len(multiple_payload_list):
             raise Exception("Number of DELIMITERS and number of parameters defined don't match")
         # if no DELIMITERS found and list empty return the request as batch
         elif len(positions) == 0:
@@ -34,7 +34,7 @@ class Batch:
 
         ret = []
         # Generates the requests
-        for i in range(0, len(list_t[0])):
+        for i in range(0, len(multiple_payload_list[0])):
 
             # convert to list to make the request editable
             dummy = list(request)
@@ -49,7 +49,7 @@ class Batch:
                 end = x[1] + offset
 
                 # payload to use
-                val = str(list_t[cont][i])
+                val = str(multiple_payload_list[cont][i])
 
                 # update offset for the next injection
                 len_old = end - start
@@ -62,6 +62,79 @@ class Batch:
 
             dummy = "".join(dummy)
             ret.append(dummy)
+        return ret
+
+    def sniper(self, request, single_payload_list):
+
+        # Gets indexes of DELIMITERS
+        positions = self._indexes(request, DELIMITERS)
+
+        default_values = []
+        # save default value for each field
+        for x in positions:
+            default_values.append(request[x[0]+len(DELIMITERS[0]):x[1]-len(DELIMITERS[1])])
+
+        model = list(request)
+        ret = []
+
+        # for each payload
+        for payload in single_payload_list:
+            # inject the payload in each position
+            for current in positions:
+                # counter for default_values
+                cont = 0
+                dummy = model.copy()
+                offset = 0
+
+                # fill every injection position either with the default value or the payload value
+                for pos in positions:
+                    start = pos[0] + offset
+                    end = pos[1] + offset
+
+                    # if we found the position we want to inject the payload into
+                    if pos == current:
+                        dummy[start:end] = payload
+                        # update offset for the next injection
+                        len_old = end - start
+                        len_new = len(payload)
+                        offset += len_new - len_old
+                    else:
+                        dummy[start:end] = default_values[cont]
+                        # update offset for the next injection
+                        len_old = end - start
+                        len_new = len(default_values[cont])
+                        offset += len_new - len_old
+
+                    cont += 1
+
+                ret.append("".join(dummy))
+
+        return ret
+
+    def battering_ram(self, request, single_payload_list):
+        # Gets indexes of DELIMITERS
+        positions = self._indexes(request, DELIMITERS)
+
+        model = list(request)
+        ret = []
+
+        # for each payload
+        for payload in single_payload_list:
+            offset = 0
+            dummy = model.copy()
+
+            # inject the payload in each position
+            for pos in positions:
+                start = pos[0] + offset
+                end = pos[1] + offset
+
+                dummy[start:end] = payload
+                # update offset for the next injection
+                len_old = end - start
+                len_new = len(payload)
+                offset += len_new - len_old
+
+            ret.append("".join(dummy))
 
         return ret
 
@@ -161,9 +234,11 @@ def main():
 
     url = "https://httpbin.org/"
 
-    # batch = Batch.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    # batch = b.pitchfork(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    # batch = b.sniper(data, ["1","2"])
+    # batch = b.battering_ram(data, ["BUUUU","GAAAA"])
     b = Batch()
-    batch = b.simple_list_generator(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    batch = b.battering_ram(data, ["BUUUU","GAAAA"])
 
     intr = Intrudo(url)
     intr.fire(batch)
