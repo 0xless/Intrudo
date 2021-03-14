@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import re
 from cliente import Cliente
 
@@ -20,7 +21,7 @@ class Batch:
         """
 
         # Check if tuples have the same length
-        if not self._check_tuple_len(multiple_payload_list):
+        if not self._check_iterable_len(multiple_payload_list):
             raise Exception("Inconsistent payloads lengths")
 
         # Gets indexes of DELIMITERS
@@ -68,6 +69,12 @@ class Batch:
 
         # Gets indexes of DELIMITERS
         positions = self._indexes(request, DELIMITERS)
+
+        if len(positions) != len(single_payload_list):
+            raise Exception("Number of DELIMITERS and number of parameters defined don't match")
+        # if no DELIMITERS found and list empty return the request as batch
+        elif len(positions) == 0:
+            return [request]
 
         default_values = []
         # save default value for each field
@@ -138,6 +145,29 @@ class Batch:
 
         return ret
 
+    def cluster_bomb(self, request, multiple_payload_list):
+        # Check if tuples have the same length
+        if not self._check_iterable_len(multiple_payload_list):
+            raise Exception("Inconsistent payloads lengths")
+
+        # Gets indexes of DELIMITERS
+        positions = self._indexes(request, DELIMITERS)
+
+        if len(positions) != len(multiple_payload_list):
+            raise Exception("Number of DELIMITERS and number of parameters defined don't match")
+        # if no DELIMITERS found and list empty return the request as batch
+        elif len(positions) == 0:
+            return [request]
+
+        ret = []
+        # Generates the requests
+        for i in itertools.product(*multiple_payload_list):
+            ret.extend(self.pitchfork(request, list(map(lambda x:[x], i))))
+
+        return ret
+
+    #----------------------------------------------------------------
+
     def _indexes(self, string, tuple_c):
         # escape special characters from delimiters
         delim_start, delim_end = self._escape_delimiters(tuple_c)
@@ -163,7 +193,7 @@ class Batch:
 
         return delim_start, delim_end
 
-    def _check_tuple_len(self, list_t):
+    def _check_iterable_len(self, list_t):
 
         # check that length of every tuple is the same
         leng = 0
@@ -234,11 +264,12 @@ def main():
 
     url = "https://httpbin.org/"
 
-    # batch = b.pitchfork(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102], ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    # batch = b.pitchfork(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102],
+    #                    ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
     # batch = b.sniper(data, ["1","2"])
-    # batch = b.battering_ram(data, ["BUUUU","GAAAA"])
+    # batch = b.battering_ram(data, ["foo","bar"])
     b = Batch()
-    batch = b.battering_ram(data, ["BUUUU","GAAAA"])
+    batch = b.cluster_bomb(data, [["1","2"], ["BUUUU","GAAAA"], ["######","******"], ["a", "b"]])
 
     intr = Intrudo(url)
     intr.fire(batch)
