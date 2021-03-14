@@ -2,66 +2,78 @@ import asyncio
 import re
 from cliente import Cliente
 
+#
+# TODO refactor simple_list_generator
+#
+#
+
 DELIMITERS = ("{{", "}}")
 assert len(DELIMITERS) == 2, "DELIMITERS must be a pair of strings"
 
-class Batch():
+
+class Batch:
     def simple_list_generator(request, list_t):
-            """
-    		Given a list of tuple (of size #params), and a model of request,
-    		returns a list of requests filled with the params.
-    		Each pair of DELIMITERS in the request model will be filled with the i-th value for that field.
-    		"""
+        """
+            Given a list of tuple (of size #params), and a model of request,
+            returns a list of requests filled with the params.
+            Each pair of DELIMITERS in the request model will be filled with the i-th value for that field.
+        """
 
-            # Check if tuples have the same length
-            if not Batch._check_tuple_len(list_t):
-                raise Exception("Inconsistent tuple lengths")
+        # Check if tuples have the same length
+        if not Batch._check_tuple_len(list_t):
+            raise Exception("Inconsistent tuple lengths")
 
-            # Gets indexes of DELIMITERS
-            positions = Batch._indexes(request, DELIMITERS)
+        # Gets indexes of DELIMITERS
+        positions = Batch._indexes(request, DELIMITERS)
 
-            if len(positions) != len(list_t):
-                raise Exception("Number of DELIMITERS and number of parameters defined don't match")
-            # if no DELIMITERS found and list empty return the request as batch
-            elif len(positions) == 0:
-                return [request]
+        if len(positions) != len(list_t):
+            raise Exception("Number of DELIMITERS and number of parameters defined don't match")
+        # if no DELIMITERS found and list empty return the request as batch
+        elif len(positions) == 0:
+            return [request]
 
-            ret = []
-            # Generates the requests
-            for i in range(0, len(list_t[0])):
+        ret = []
+        # Generates the requests
+        for i in range(0, len(list_t[0])):
 
-                dummy = list(request)
-                cont = 0
+            # convert to list to make the request editable
+            dummy = list(request)
+            # payload position index
+            cont = 0
+            # offset in positions because of the insertion of a payload
+            offset = 0
 
-                # offset in positions because of the insertion of a payload
-                offset = 0
+            for x in positions:
+                # get injection position (given position in the beginning and offset)
+                start = x[0] + offset
+                end = x[1] + offset
 
-                for x in positions:
-                    start = x[0] + offset - len(DELIMITERS[0])
-                    end = x[1] + offset + len(DELIMITERS[1])
-                    val = str(list_t[cont][i])
+                # payload to use
+                val = str(list_t[cont][i])
 
-                    len_old = end - start
-                    len_new = len(val)
+                # update offset for the next injection
+                len_old = end - start
+                len_new = len(val)
+                offset += len_new - len_old
 
-                    offset += len_new - len_old
+                # injection
+                dummy[start:end] = val
+                cont += 1
 
-                    dummy[start:end] = val
-                    cont += 1
+            dummy = "".join(dummy)
+            ret.append(dummy)
 
-                dummy = "".join(dummy)
-                ret.append(dummy)
-
-            return ret
+        return ret
 
     def _indexes(string, tuple_c):
+        # escape special characters from delimiters
         delim_start, delim_end = Batch._escape_delimiters(tuple_c)
 
-        # match anything between the delimiters
+        # match anything between the delimiters (use greedy regex to handle multiple delimiters in one line)
         pattern = delim_start + ".*?" + delim_end
 
         # gets the indexes of first and last character of the matched string (excluding the delimiters)
-        result = [(m.start(0) + len(tuple_c[0]), m.end(0) - len(tuple_c[1])) for m in re.finditer(pattern, string)]
+        result = [(m.start(0), m.end(0)) for m in re.finditer(pattern, string)]
 
         return result
 
@@ -79,14 +91,18 @@ class Batch():
         return delim_start, delim_end
 
     def _check_tuple_len(list_t):
+
+        # check that length of every tuple is the same
         leng = 0
         for t in list_t:
+            # is it's the first length observed...
             if not leng:
                 leng = len(t)
             else:
                 if not leng == len(t):
                     return False
         return True
+
 
 class Intrudo:
     class Response:
