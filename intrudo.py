@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import re
+from functools import partial
 from cliente import Cliente
 
 #
@@ -166,7 +167,7 @@ class Batch:
 
         return ret
 
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
 
     def _indexes(self, string, tuple_c):
         # escape special characters from delimiters
@@ -206,6 +207,32 @@ class Batch:
                     return False
         return True
 
+
+class Callback:
+    def __init__(self, field, value, condition):
+        self.field = field
+        self.value = value
+        self.condition = condition
+        self.storage = {}
+        self._id = 0
+
+    def watch_value(self, request, response):
+        self._watch_value(request, response, self.field, self.value)
+
+    def watch_condition(self, request, response):
+        self._watch_condition(request, response, self.condition)
+
+    def _watch_value(self, request, response, field, value):
+        if str(getattr(response, field, None)) == str(value):
+            self.storage[self._id] = (request, response)
+            self._id += 1
+
+    def _watch_condition(self, request, response, condition_function):
+        if condition_function(request, response):
+            self.storage[self._id] = (request, response)
+            self._id += 1
+
+
 class Intrudo:
     class Response:
         def __init__(self, status, status_code, http_version, headers, body):
@@ -214,10 +241,12 @@ class Intrudo:
             self.http_version = http_version
             self.headers = headers
             self.body = body
+            self.length = len(body)
 
-    def __init__(self, url):
+    def __init__(self, url, callback = None):
         self.url = url
         self.loop = asyncio.get_event_loop()
+        self.callback = callback
 
     async def _setup(self, client):
         await client.connect()
@@ -238,9 +267,8 @@ class Intrudo:
 
         response = Intrudo.Response(client.status, client.status_code, client.http_version, client.headers, client.body)
 
-        # Callback here!!!!
-        # Demo purposes only
-        print(response.body)
+        if self.callback:
+            self.callback(request, response)
 
         return response
 
@@ -265,14 +293,15 @@ def main():
     url = "https://httpbin.org/"
 
     # batch = b.pitchfork(data, [[1,2,3,4,5,6,7,8,9,10], [12,22,32,42,52,62,72,82,92,102],
-    #                    ["dummy"+str(x) for x in range(0,10)], ["other"+str(x) for x in range(20,30)]])
+    #                    ["foo-"+str(x) for x in range(0,10)], ["bar-"+str(x) for x in range(20,30)]])
     # batch = b.sniper(data, ["1","2"])
-    # batch = b.battering_ram(data, ["foo","bar"])
+    # batch = b.battering_ram(data, ["oof","rab"])
     b = Batch()
-    batch = b.cluster_bomb(data, [["1","2"], ["BUUUU","GAAAA"], ["######","******"], ["a", "b"]])
+    batch = b.cluster_bomb(data, [["1","2"], ["foo","bar"], ["foofoo","barbar"], ["a", "b"]])
 
-    intr = Intrudo(url)
+    # c = Callback("status_code", None, (lambda _, y: int(y.status_code) == 200))
+    c = Callback("status_code", 200, None)
+    intr = Intrudo(url, callback=c.watch_value)
     intr.fire(batch)
-
 
 main()
