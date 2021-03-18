@@ -216,6 +216,10 @@ class Callback:
         self.storage = {}
         self._id = 0
 
+    def store(self, request, response):
+        self.storage[self._id] = (request, response)
+        self._id += 1
+
     def watch_value(self, request, response):
         self._watch_value(request, response, self.field, self.value)
 
@@ -300,8 +304,11 @@ def main():
     batch = b.cluster_bomb(data, [["1","2"], ["foo","bar"], ["foofoo","barbar"], ["a", "b"]])
 
     # c = Callback("status_code", None, (lambda _, y: int(y.status_code) == 200))
-    c = Callback("status_code", 200, None)
-    intr = Intrudo(url, callback=c.watch_value)
+    # c = Callback("status_code", 200, None)
+    c = Callback("status_code", None, None)
+    intr = Intrudo(url, callback=c.store)
     intr.fire(batch)
+
+    print(c.storage)
 
 main()
