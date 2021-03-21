@@ -7,3 +7,7 @@
 
 ### Demo
 [![asciicast](https://asciinema.org/a/SmaFco0xO4mBjXHk3K5cSxtjp.svg)](https://asciinema.org/a/SmaFco0xO4mBjXHk3K5cSxtjp)
+
+<p>This is some text.</p>
+<script src="https://asciinema.org/a/14.js" id="asciicast-14" async></script>
+<p>This is some other text.</p>
