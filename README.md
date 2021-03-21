@@ -6,5 +6,5 @@
 ![GitHub](https://img.shields.io/github/license/0xless/intrudo)
 
 ### Demo
-[![demo](https://github.com/0xless/Intrudo/blob/main/img/intrudo_demo_small.gif)]
+![demo](https://github.com/0xless/Intrudo/blob/main/img/intrudo_demo_small.gif)
 
