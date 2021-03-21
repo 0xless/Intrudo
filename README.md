@@ -4,3 +4,6 @@
 ![HTTP - support](https://img.shields.io/badge/HTTP-1.1-blue)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/asyncio)
 ![GitHub](https://img.shields.io/github/license/0xless/intrudo)
+
+### Demo
+[![asciicast](https://asciinema.org/a/SmaFco0xO4mBjXHk3K5cSxtjp.svg)](https://asciinema.org/a/SmaFco0xO4mBjXHk3K5cSxtjp)
